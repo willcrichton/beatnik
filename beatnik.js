@@ -36,38 +36,52 @@ Beatnik = function( mp3, fftCallback, audioLoadCallback ){
 		for( var i = 0; i < 80; i++ ) kickAvg += vu.getLevel(i);
 		kickAvg /= 80;
 		
-		that.callback( freqByteData, kick.isKick(), kickAvg, inputArrayL, inputArrayR );					
+		that.callback( freqByteData, kick.isKick(), kickAvg, event.outputBuffer );					
 	}
 	
 	var context = new webkitAudioContext();
 	var source = context.createBufferSource();
+	var volume = context.createGainNode();
+		
 	var processor = context.createJavaScriptNode(2048);
 	
-
 	processor.onaudioprocess = fftProcess;
-	
+		
 	var analyzer = context.createAnalyser();
 	analyzer.fftSize = 2048;
 	analyzer.smoothingTimeConstant = 0.75;
 	
-	source.connect(processor);
+	source.connect(volume);
+	volume.connect(processor);
 	processor.connect(analyzer);
 	analyzer.connect(context.destination);
+	
+	this.context = context;
+	this.source = source;
+	this.volume = volume;
 	
 	var request = new XMLHttpRequest();
 	request.open("GET",mp3,true);
 	request.responseType = "arraybuffer";
 	request.onload = function(){
 		source.buffer = context.createBuffer(request.response, false);
-		source.loop = true;
-		source.noteOn(0);
+		source.loop = false;
 		if(audioLoadCallback) audioLoadCallback();
 	}
+	
 	this.load = function(){
 		request.send();
 	}
 	
-	this.source = source;
+	this.play = function(){
+		console.log("Playing...");
+		source.noteOn(context.currentTime + 1);
+	}
+	
+	this.pause = function(){
+		console.log("Pausing...");
+		source.noteOff(context.currentTime);
+	}
 
 	this.getDuration = function(){
 		return source.buffer.duration;
@@ -75,6 +89,44 @@ Beatnik = function( mp3, fftCallback, audioLoadCallback ){
 	
 	this.getPosition = function(){
 		return context.currentTime
+	}
+	
+	this.setSpeed = function(speed){
+		source.playbackRate.value = speed;
+	}
+	
+	this.setVolume = function(vol){
+		volume.gain.value = vol;
+	}
+	
+	this.spatialize = function(){
+		var spatializer = context.createPanner();
+		spatializer.listener = context.listener;
+		volume.disconnect();
+		volume.connect(spatializer);
+		spatializer.connect(processor);
+	}
+	
+	this.addImpulseEffect = function( impulse ){
+		var convolver = context.createConvolver();
+		volume.disconnect();
+		volume.connect(convolver);
+		convolver.connect(processor);
+		var r = new XMLHttpRequest();
+		r.open("GET",impulse);
+		r.responseType = "arraybuffer";
+		r.onload = function(){
+			convolver.buffer = context.createBuffer(r.response,false);
+		}
+		r.send();
+	}
+	
+	this.set3DPosition = function(x,y,z){
+		this.spatializer.setPosition(x,y,z);
+	}
+	
+	this.set3DVelocity = function(x,y,z){
+		this.spatializer.setPosition(x,y,z);
 	}
 }
 
@@ -85,7 +137,7 @@ Beatnik( songString, analyzeCallback, onLoadCallback ) - initializes a Beatnik o
 		freqByteData - an FFT array of size 2048 with a value corresponding to the... volume... of each channel (0 = lowest, 2048 = highest)
 		beat - a boolean indicating whether or not the song has a beat (not that accurate, should be used in conjunction with beatLevel)
 		beatLevel - indicates the strength of the beat, so harder beats = higher level
-		inputArrayL, inputArrayR - the left and right input arrays, the values taken straight from the song; modify these values to affect how the song sounds
+		outputBuffer - the buffer containing the values to be heard taken straight from the song; modify these values to affect how the song sounds
 	onLoadCallback - called when the music resources is loaded and begins playing
 load() - fetches the music resource using an XMLHttpRequest
 getDuration() - gets the length of the song

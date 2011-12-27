@@ -6,16 +6,19 @@
 	<body>
 		<script src="sound/beatnik.js"></script>
 		<script>
+			var processor;
 			window.onload = function(){	
-				var processor;
 				function analyze( fft, beat, beatLevel ){
+					console.log("Processing...");
 				}
 				function onLoad(){
-					console.log('Audio loaded!');
+					console.log("Loaded");
 				}
 				processor = new Beatnik( "sound/killerqueen.mp3", analyze, onLoad );
 				processor.load();
 			};
 		</script>
+		<button onclick="processor.play()">Play</button>
+		<button onclick="processor.pause()">Stop</button>
 	</body>
 </html>
