@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Beatnik Test</title>
+	</head>
+	<body>
+		<script src="sound/beatnik.js"></script>
+		<script>
+			window.onload = function(){	
+				var processor;
+				function analyze( fft, beat, beatLevel ){
+				}
+				function onLoad(){
+					console.log('Audio loaded!');
+				}
+				processor = new Beatnik( "sound/killerqueen.mp3", analyze, onLoad );
+				processor.load();
+			};
+		</script>
+	</body>
+</html>
