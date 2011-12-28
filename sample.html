@@ -2,23 +2,77 @@
 <html>
 	<head>
 		<title>Beatnik Test</title>
+		<style>
+			/* Just a quick font styling for our text divs */
+			.visualizer {
+				font: 10px Arial;
+			}
+		</style>
 	</head>
 	<body>
-		<script src="sound/beatnik.js"></script>
-		<script>
+		<script src="beatnik.js"></script>
+		<script>		
+			/*****************************************
+			 * Beatnik sample test file
+			 * By Will Crichton, 2012
+			 * Basic music visualization with text
+			 ****************************************/
+			
+			// Create global variables we might need
 			var processor;
+			var character = "/";
 			window.onload = function(){	
-				function analyze( fft, beat, beatLevel ){
-					console.log("Processing...");
+				// Create the divs we'll put the text in
+				var divs = [];
+				for( var i = 0; i < 60; i++ ){
+					// Create a new div
+					var d = document.createElement('div');
+					// Set class of the div to "visualizer"
+					d.setAttribute('class','visualizer');
+					// Do some fancy math to get a gradient red-green color for good looks
+					var colorNumber = Math.floor(255 * i / 60);
+					d.style.color = "#" + ((255-colorNumber) < 16 ? '0' : '') + (255 - colorNumber).toString(16) + (colorNumber < 16 ? '0' : '') + colorNumber.toString(16) + "00";
+					// Add the div to the document and store it in our "divs" array
+					document.body.appendChild(d);
+					divs.push(d);
 				}
+
+				// The analyze callback function used in the Beatnik object which processes the music
+				function analyze( fft ){
+					for( i in divs ){
+						var d = divs[i];
+						// Using the "fft" array, we'll put in more characters for the channels with the louder music
+						var level = Math.floor(fft[i]);
+						d.innerHTML = "| " + new Array( level + 1 ).join( character );
+					}
+				}
+				
+				// An onLoad callback for when the music resource is loaded into the page
 				function onLoad(){
 					console.log("Loaded");
+					// Remove the "loading" message upon load
+					document.body.removeChild(document.getElementById('loading'));
 				}
-				processor = new Beatnik( "sound/killerqueen.mp3", analyze, onLoad );
+				
+				// Create the Beatnik object, including the mp3 file, the analyze callback, and the onLoad callback
+				processor = new Beatnik( "killerqueen.mp3", analyze, onLoad );
+				// Tell the Beatnik to load the song via an XMLHttpRequest
 				processor.load();
 			};
 		</script>
 		<button onclick="processor.play()">Play</button>
 		<button onclick="processor.pause()">Stop</button>
+		<select onchange="character = this.options[this.selectedIndex].value">
+			<option value="/">/</option>
+			<option value="\">\</option>
+			<option value="-">-</option>
+			<option value="*">*</option>
+			<option value="|">|</option>
+			<option value="i">i</option>
+			<option value="!">!</option>
+			<option value="(">(</option>
+			<option value=")">)</option>
+		</select>
+		<h1 id="loading">Loading...</h1>
 	</body>
 </html>
