@@ -14,11 +14,18 @@ Beatnik is a Javascript framework to aid in the analyzation/processing of music.
 * [Impulse responses](https://dvcs.w3.org/hg/audio/raw-file/tip/webaudio/specification.html#Convolution-section): applying sound effects (e.g. talking in a concert hall or underwater)
 * [3D Spatialization](https://dvcs.w3.org/hg/audio/raw-file/tip/webaudio/specification.html#Spatialization-section): positioning sound in 3D space relative to listener (e.g. hearing it from top or left)  
 
-### Sample Code ###
+### Usage ###
+Load in the Beatnik object from the minified script.
+```html
+<script src="beatnik.min.js"></script>
+```
+The following code sample loads in a "test.mp3" file and then logs the 1st value in the FFT array to the console with the song's current position.
+```html
+<script>
 	var processor;
 
 	function analyze( fft, beat, beatLevel, outputbuffer ){
-		console.log('FFT value at index 0 is ' + fft[0]);
+		console.log('FFT value at index 0 is ' + fft[0] + ' at position ' + Math.round(processor.getPosition()));
 	}
 
 	function onLoad(){
@@ -28,6 +35,8 @@ Beatnik is a Javascript framework to aid in the analyzation/processing of music.
 
 	processor = new Beatnik('test.mp3', analyze, onLoad);
 	processor.load();
+</script>
+```
 
 ### Issues ###
 **My page freezes every time it loads a song and/or I can't show a loading image while the song is loading.**  
