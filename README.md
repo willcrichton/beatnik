@@ -15,11 +15,14 @@ Beatnik is a Javascript framework to aid in the analyzation/processing of music.
 * [3D Spatialization](https://dvcs.w3.org/hg/audio/raw-file/tip/webaudio/specification.html#Spatialization-section): positioning sound in 3D space relative to listener (e.g. hearing it from top or left)  
 
 ### Usage ###
-Load in the Beatnik object from the minified script.
+Load in the Beatnik object from the minified script. 
+
 ```html
 <script src="beatnik.min.js"></script>
 ```
-The following code sample loads in a "test.mp3" file and then logs the 1st value in the FFT array to the console with the song's current position.
+
+The following code sample loads in a "test.mp3" file and then logs the 1st value in the FFT array to the console with the song's current position. 
+
 ```html
 <script>
 	var processor;
