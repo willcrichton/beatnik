@@ -49,4 +49,4 @@ As far as I know, when the XMLHttpRequest is fetching the song resource, the pag
 This is an issue with Chrome where accessing songs through the Webkit Audio API is apparently not allowed. Unfortunately, this means you can't test it just by using regular file:// URLs. However, it will work if you host the file(s) on a server, either an actual server or something like [WAMP](http://www.wampserver.com/).  
 
 ### Credits ###
-Thank you to Charles Cliffe with CubicFX for the beat detection algorithm.
+Thank you to Charles Cliffe with CubicFX for the beat detection algorithm, and thanks to James Yang for his insights into browser compatibility with the Audio API.
