@@ -14,13 +14,14 @@
 		<script>		
 			/*****************************************
 			 * Beatnik sample test file
-			 * By Will Crichton, 2012
+			 * By Will Crichton, 2013
 			 * Basic music visualization with text
 			 ****************************************/
 			
 			// Create global variables we might need
 			var processor;
 			var character = "/";
+			var play;
 			window.onload = function(){	
 				// Create the divs we'll put the text in
 				var divs = [];
@@ -49,7 +50,6 @@
 				
 				// An onLoad callback for when the music resource is loaded into the page
 				function onLoad(){
-					console.log("Loaded");
 					// Remove the "loading" message upon load
 					document.body.removeChild(document.getElementById('loading'));
 				}
@@ -59,19 +59,29 @@
 				// Tell the Beatnik to load the song via an XMLHttpRequest
 				processor.load();
 			};
+
+			function play(){
+				var button = document.getElementsByTagName('button')[0];
+				if(processor.playing){
+					button.innerHTML = 'Play';
+					processor.pause();
+				} else {
+					button.innerHTML = 'Pause';
+					processor.play();
+				}
+			}
 		</script>
-		<button onclick="processor.play()">Play</button>
-		<button onclick="processor.pause()">Stop</button>
+		<button onclick="play()">Play</button>
 		<select onchange="character = this.options[this.selectedIndex].value">
-			<option value="/">/</option>
-			<option value="\">\</option>
-			<option value="-">-</option>
-			<option value="*">*</option>
-			<option value="|">|</option>
-			<option value="i">i</option>
-			<option value="!">!</option>
-			<option value="(">(</option>
-			<option value=")">)</option>
+			<option>/</option>
+			<option>\</option>
+			<option>-</option>
+			<option>*</option>
+			<option>|</option>
+			<option>i</option>
+			<option>!</option>
+			<option>(</option>
+			<option>)</option>
 		</select>
 		<h1 id="loading">Loading...</h1>
 	</body>
