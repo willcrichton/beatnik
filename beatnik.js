@@ -4,141 +4,155 @@
 * @description: An API for convenient processing of sound
 *********************************/
 
-BeatDetektor = undefined;
+var BeatDetektor;
 
 Beatnik = function( mp3, fftCallback, audioLoadCallback ){
 
-	var detector = new BeatDetektor(50,199);
-	var kick = new BeatDetektor.modules.vis.BassKick();
-	var vu = new BeatDetektor.modules.vis.VU();
-	var that = this;
-	this.callback = fftCallback || function(){};
-	function fftProcess( event ){
-		var inputArrayL = event.inputBuffer.getChannelData(0);
-		var inputArrayR = event.inputBuffer.getChannelData(1);
-		var outputArrayL = event.outputBuffer.getChannelData(0);
-		var outputArrayR = event.outputBuffer.getChannelData(1);
-		
-		var n = inputArrayL.length;
-		for (var i = 0; i < n; ++i) {
-			outputArrayL[i] = inputArrayL[i];
-			outputArrayR[i] = inputArrayR[i];
-		}
-			
-		var freqByteData = new Uint8Array(analyzer.frequencyBinCount);
-		analyzer.getByteFrequencyData(freqByteData);
-		
-		detector.process( context.currentTime, inputArrayL );
-		kick.process( detector );
-		vu.process( detector );
-		
-		var kickAvg = 0;
-		for( var i = 0; i < 80; i++ ) kickAvg += vu.getLevel(i);
-		kickAvg /= 80;
-		
-		that.callback( freqByteData, kick.isKick(), kickAvg, event.outputBuffer );					
-	}
-	
-	var context = new webkitAudioContext();
-	var source = context.createBufferSource();
-	var volume = context.createGainNode();
-		
-	var processor = context.createJavaScriptNode(2048);
-	
-	processor.onaudioprocess = fftProcess;
-		
-	var analyzer = context.createAnalyser();
-	analyzer.fftSize = 2048;
-	analyzer.smoothingTimeConstant = 0.75;
-	
-	source.connect(volume);
-	volume.connect(processor);
-	processor.connect(analyzer);
-	analyzer.connect(context.destination);
-	
-	this.context = context;
-	this.source = source;
-	this.volume = volume;
-	
-	var request = new XMLHttpRequest();
-	request.open("GET",mp3,true);
-	request.responseType = "arraybuffer";
-	request.onload = function(){
-		source.buffer = context.createBuffer(request.response, false);
-		source.loop = false;
-		if(audioLoadCallback) audioLoadCallback();
-	}
-	
-	this.load = function(){
-		request.send();
-	}
-	
-	this.play = function(){
-		console.log("Playing...");
-		source.noteOn(context.currentTime + 1);
-	}
-	
-	this.pause = function(){
-		console.log("Pausing...");
-		source.noteOff(context.currentTime);
-	}
+    var detector = new BeatDetektor(50,199);
+    var kick = new BeatDetektor.modules.vis.BassKick();
+    var vu = new BeatDetektor.modules.vis.VU();
+    var self = this;
+    this.callback = fftCallback || function(){};
+    function fftProcess( event ){
+        var inputArrayL = event.inputBuffer.getChannelData(0);
+        var inputArrayR = event.inputBuffer.getChannelData(1);
+        var outputArrayL = event.outputBuffer.getChannelData(0);
+        var outputArrayR = event.outputBuffer.getChannelData(1);
+        
+        var n = inputArrayL.length;
+        for (var i = 0; i < n; ++i) {
+            outputArrayL[i] = inputArrayL[i];
+            outputArrayR[i] = inputArrayR[i];
+        }
+            
+        var freqByteData = new Uint8Array(analyzer.frequencyBinCount);
+        analyzer.getByteFrequencyData(freqByteData);
+        
+        detector.process( context.currentTime, inputArrayL );
+        kick.process( detector );
+        vu.process( detector );
+        
+        var kickAvg = 0;
+        for( var i = 0; i < 80; i++ ) kickAvg += vu.getLevel(i);
+        kickAvg /= 80;
+        
+        self.callback( freqByteData, kick.isKick(), kickAvg, event.outputBuffer );                  
+    }
+    
+    var context = new (webkitAudioContext || audioContext)();
+    var source;
+    var volume = context.createGainNode();
+        
+    var processor = context.createJavaScriptNode(2048);
+    
+    processor.onaudioprocess = fftProcess;
+        
+    var analyzer = context.createAnalyser();
+    analyzer.fftSize = 2048;
+    analyzer.smoothingTimeConstant = 0.75;
+    
+    volume.connect(processor);
+    processor.connect(analyzer);
+    analyzer.connect(context.destination);
+    
+    this.context = context;
+    this.volume = volume;
+    this.playing = false;
+    
+    var request = new XMLHttpRequest();
+    var buffer;
+    var elapsed = 0;
+    var startTime = 0;
+    request.open("GET",mp3,true);
+    request.responseType = "arraybuffer";
+    request.onload = function(){
+        context.decodeAudioData(request.response, function(buf){
+            buffer = buf;
+            if(audioLoadCallback) audioLoadCallback.call(self);
+        });
+    }
+    
+    this.load = function(){
+        request.send();
+    }
 
-	this.getDuration = function(){
-		return source.buffer.duration;
-	}
-	
-	this.getPosition = function(){
-		return context.currentTime
-	}
-	
-	this.setSpeed = function(speed){
-		source.playbackRate.value = speed;
-	}
-	
-	this.setVolume = function(vol){
-		volume.gain.value = vol;
-	}
-	
-	this.spatialize = function(){
-		var spatializer = context.createPanner();
-		spatializer.listener = context.listener;
-		volume.disconnect();
-		volume.connect(spatializer);
-		spatializer.connect(processor);
-	}
-	
-	this.addImpulseEffect = function( impulse ){
-		var convolver = context.createConvolver();
-		volume.disconnect();
-		volume.connect(convolver);
-		convolver.connect(processor);
-		var r = new XMLHttpRequest();
-		r.open("GET",impulse);
-		r.responseType = "arraybuffer";
-		r.onload = function(){
-			convolver.buffer = context.createBuffer(r.response,false);
-		}
-		r.send();
-	}
-	
-	this.set3DPosition = function(x,y,z){
-		this.spatializer.setPosition(x,y,z);
-	}
-	
-	this.set3DVelocity = function(x,y,z){
-		this.spatializer.setPosition(x,y,z);
-	}
+    this.reverse = function(){
+        Array.prototype.reverse.call(buffer.getChannelData(0));
+        Array.prototype.reverse.call(buffer.getChannelData(1));
+    }
+    
+    this.play = function(){
+        source = context.createBufferSource();
+        source.buffer = buffer;
+        source.connect(this.volume);
+        source.noteGrainOn(0, elapsed, source.buffer.duration);
+        source.loop = false;
+        startTime = context.currentTime;
+        this.playing = true;
+    }
+    
+    this.pause = function(){
+        source.noteOff(context.currentTime);
+        elapsed += context.currentTime - startTime;
+        this.playing = false;
+    }
+
+    this.getDuration = function(){
+        return source.buffer.duration;
+    }
+    
+    this.getPosition = function(){
+        return elapsed + context.currentTime - startTime;
+    }
+    
+    this.setSpeed = function(speed){
+        source.playbackRate.value = speed;
+    }
+    
+    this.setVolume = function(vol){
+        volume.gain.value = vol;
+    }
+    
+    this.spatialize = function(){
+        var spatializer = context.createPanner();
+        spatializer.listener = context.listener;
+        volume.disconnect();
+        volume.connect(spatializer);
+        spatializer.connect(processor);
+    }
+    
+    this.addImpulseEffect = function( impulse ){
+        var convolver = context.createConvolver();
+        volume.disconnect();
+        volume.connect(convolver);
+        convolver.connect(processor);
+        var r = new XMLHttpRequest();
+        r.open("GET",impulse);
+        r.responseType = "arraybuffer";
+        r.onload = function(){
+            convolver.buffer = context.createBuffer(r.response,false);
+        }
+        r.send();
+    }
+    
+    this.set3DPosition = function(x,y,z){
+        this.spatializer.setPosition(x,y,z);
+    }
+    
+    this.set3DVelocity = function(x,y,z){
+        this.spatializer.setPosition(x,y,z);
+    }
 }
 
 /* FUNCTION REFERENCE
 Beatnik( songString, analyzeCallback, onLoadCallback ) - initializes a Beatnik object
-	songString - string containing relative path to song file to load, e.g. music/helloworld.mp3
-	analyzeCallback( freqByteData, beat, beatLevel, inputArrayL ) - a callback called every moment of the song containing information about
-		freqByteData - an FFT array of size 2048 with a value corresponding to the... volume... of each channel (0 = lowest, 2048 = highest)
-		beat - a boolean indicating whether or not the song has a beat (not that accurate, should be used in conjunction with beatLevel)
-		beatLevel - indicates the strength of the beat, so harder beats = higher level
-		outputBuffer - the buffer containing the values to be heard taken straight from the song; modify these values to affect how the song sounds
-	onLoadCallback - called when the music resources is loaded and begins playing
+    songString - string containing relative path to song file to load, e.g. music/helloworld.mp3
+    analyzeCallback( freqByteData, beat, beatLevel, inputArrayL ) - a callback called every moment of the song containing information about
+        freqByteData - an FFT array of size 2048 with a value corresponding to the... volume... of each channel (0 = lowest, 2048 = highest)
+        beat - a boolean indicating whether or not the song has a beat (not that accurate, should be used in conjunction with beatLevel)
+        beatLevel - indicates the strength of the beat, so harder beats = higher level
+        outputBuffer - the buffer containing the values to be heard taken straight from the song; modify these values to affect how the song sounds
+    onLoadCallback - called when the music resources is loaded and begins playing
 load() - fetches the music resource using an XMLHttpRequest
 getDuration() - gets the length of the song
 getPostition() - returns the current position in the song, e.g. 1 minutes and 20 seconds in to a 3 minute song */
